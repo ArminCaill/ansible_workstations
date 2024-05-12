@@ -1,0 +1,59 @@
+---
+- hosts: localhost
+  connection: local
+  become: true
+
+  tasks:
+  - name: install packages
+    package:
+      name:
+        - htop
+        - tmux
+        - vim
+        - python3-psutil
+
+  - name: copy wallpaper file # Specific to gnome
+    copy:
+      src: files/wallpaper.jpg
+      dest: /usr/share/backgrounds/ansible-wallpaper.jpg
+      owner: root
+      group: root
+
+  - name: set wallpaper # Specific to gnome
+    become_user: armin
+    dconf:
+      key: "/org/gnome/desktop/background/picture-uri"
+      value: "'file:///usr/share/backgrounds/ansible-wallpaper.jpg'"
+
+  - name: set wallpaper position # Specific to gnome
+    become_user: armin
+    dconf:
+      key: "/org/gnome/desktop/background/picture-options"
+      value: "'zoom'"
+
+  - name: copy .bashrc file
+    copy:
+      src: files/bashrc
+      dest: /home/armin/.bashrc
+      owner: armin
+      group: armin
+
+  - name: add ansible user
+    user:
+      name: velociraptor
+      system: yes
+
+  - name: set up sudo for ansible user
+    copy:
+      src: files/sudoer_velociraptor
+      dest: /etc/sudoers.d/velociraptor
+      owner: root
+      group: root
+      mode: 0440
+
+  - name: add ansible-pull cron job
+    cron:
+      name: ansible auto-provision
+      user: velociraptor
+      minute: "*/10"
+      job: ansible-pull -o -U https://github.com/ArminCaill/ansible_workstations.git
